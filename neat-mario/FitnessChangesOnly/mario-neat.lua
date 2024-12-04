@@ -635,16 +635,17 @@ function initializePool()
 	initializeRun()
 end
 
+-- TODO: Change to initial of Galaga game
+
 function initializeRun()
 	savestate.load(config.NeatConfig.Filename);
 	rightmost = 0
 	pool.currentFrame = 0
 	timeout = config.NeatConfig.TimeoutConstant
 	game.clearJoypad()
-	startCoins = game.getCoins()
 	startScore = game.getScore()
 	checkMarioCollision = true
-	marioHitCounter = 0
+	shipHitCounter = 0
 	
 	local species = pool.species[pool.currentSpecies]
 	local genome = species.genomes[pool.currentGenome]
@@ -695,7 +696,7 @@ function fitnessAlreadyMeasured()
 	return genome.fitness ~= 0
 end
 
-form = forms.newform(500, 500, "Mario-Neat")
+form = forms.newform(500, 500, "Galaga-Neat")
 netPicture = forms.pictureBox(form, 5, 250,470, 200)
 
 
@@ -964,6 +965,7 @@ function flipState()
 end
  
 function loadPool()
+	-- TODO: Change to my pool
 	filename = forms.openfile("DP1.state.pool","C:\Users\mmill\Downloads\BizHawk-2.2\Lua\SNES\neat-mario\pool") 
 	--local filename = forms.gettext(saveLoadFile)
 	forms.settext(saveLoadFile, filename)
@@ -1008,7 +1010,6 @@ MeasuredLabel = forms.label(form, "Measured: " .. "", 330, 5)
 FitnessLabel = forms.label(form, "Fitness: " .. "", 5, 30)
 MaxLabel = forms.label(form, "Maximum: " .. "", 130, 30)
 
-CoinsLabel = forms.label(form, "Coins: " .. "", 5, 65)
 ScoreLabel = forms.label(form, "Score: " .. "", 130, 65)
 DmgLabel = forms.label(form, "Damage: " .. "", 230, 65)
 
@@ -1021,6 +1022,9 @@ playTopButton = forms.button(form, "Play Top", playTop, 230, 102)
 
 saveLoadFile = forms.textbox(form, config.NeatConfig.Filename .. ".pool", 170, 25, nil, 5, 148)
 saveLoadLabel = forms.label(form, "Save/Load:", 5, 129)
+
+
+-- TODO: Most code changes will be in here
 
 while true do
 	
@@ -1045,10 +1049,12 @@ while true do
 	
 	local hitTimer = game.getMarioHitTimer()
 	
+	-- Likely change to be "death" counter instead of hit counter as the ship effectively only has 1 life
+
 	if checkMarioCollision == true then
 		if hitTimer > 0 then
-			marioHitCounter = marioHitCounter + 1
-			console.writeline("Mario took damage, hit counter: " .. marioHitCounter)
+			shipHitCounter = shipHitCounter + 1
+			console.writeline("Ship took damage, hit counter: " .. shipHitCounter)
 			checkMarioCollision = false
 		end
 	end
@@ -1061,20 +1067,22 @@ while true do
 	
 	local timeoutBonus = pool.currentFrame / 4
 	if timeout + timeoutBonus <= 0 then
-	
-		local coins = game.getCoins() - startCoins
+
 		local score = game.getScore() - startScore
 		
-		console.writeline("Coins: " .. coins .. " score: " .. score)
+		console.writeline("Score: " .. score)
 
-		local coinScoreFitness = (coins * 50) + (score * 0.2)
-		if (coins + score) > 0 then 
-			console.writeline("Coins and Score added " .. coinScoreFitness .. " fitness")
+		local scoreFitness = (score * 0.2);
+		if (score) > 0 then 
+			console.writeline("Score added " .. scoreFitness .. " fitness")
 		end
 		
-		local hitPenalty = marioHitCounter * 200
+		local hitPenalty = shipHitCounter * 200
 		
-		local fitness = coinScoreFitness - hitPenalty + rightmost - pool.currentFrame / 2
+		local fitness = scoreFitness - hitPenalty + rightmost - pool.currentFrame / 2
+
+		-- TODO: Change to enemy count to be 0 for beat level
+
 		if rightmost > 4816 then
 			fitness = fitness + 1000
 			console.writeline("!!!!!!Beat level!!!!!!!")
@@ -1116,9 +1124,8 @@ while true do
 	forms.settext(GenomeLabel, "Genome: " .. pool.currentGenome)
 	forms.settext(MaxLabel, "Maximum: " .. math.floor(pool.maxFitness))
 	forms.settext(MeasuredLabel, "Measured: " .. math.floor(measured/total*100) .. "%")
-	forms.settext(CoinsLabel, "Coins: " .. (game.getCoins() - startCoins))
 	forms.settext(ScoreLabel, "Score: " .. (game.getScore() - startScore))
-	forms.settext(DmgLabel, "Damage: " .. marioHitCounter)
+	forms.settext(DmgLabel, "Damage: " .. shipHitCounter)
 
 	pool.currentFrame = pool.currentFrame + 1
 	

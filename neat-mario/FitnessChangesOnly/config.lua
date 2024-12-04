@@ -2,7 +2,9 @@ local _M = {}
 
 _M.NeatConfig = {
 --Filename = "DP1.state",
-Filename = "C:/Users/mmill/Downloads/BizHawk-2.2/Lua/SNES/neat-mario/pool/DP1.state",
+
+-- TODO: Change this to my initial state
+Filename = "/Galaga-NEAT/neat-mario/FitnessChangesOnly/pool/",
 Population = 300,
 DeltaDisjoint = 2.0,
 DeltaWeights = 0.4,
