@@ -146,7 +146,7 @@ end
 function evaluateNetwork(network, inputs)
 	table.insert(inputs, 1)
 	if #inputs ~= Inputs then
-		console.writeline("Incorrect number of neural network inputs.")
+		console.writeline("Incorrect number of neural network inputs " .. #inputs)
 		return {}
 	end
 	
@@ -635,17 +635,14 @@ function initializePool()
 	initializeRun()
 end
 
--- TODO: Change to initial of Galaga game
-
 function initializeRun()
-	savestate.load(config.NeatConfig.Filename);
-	rightmost = 0
+	savestate.load("D:/NEAT-Galaga/Galaga-NEAT/neat-mario/FitnessChangesOnly/pool/DP1.State");
+	prevScore = 0
 	pool.currentFrame = 0
 	timeout = config.NeatConfig.TimeoutConstant
 	game.clearJoypad()
 	startScore = game.getScore()
-	checkMarioCollision = true
-	shipHitCounter = 0
+	deaths = 0
 	
 	local species = pool.species[pool.currentSpecies]
 	local genome = species.genomes[pool.currentGenome]
@@ -698,9 +695,6 @@ end
 
 form = forms.newform(500, 500, "Galaga-Neat")
 netPicture = forms.pictureBox(form, 5, 250,470, 200)
-
-
---int forms.pictureBox(int formhandle, [int? x = null], [int? y = null], [int? width = null], [int? height = null]) 
 
 function displayGenome(genome)
 	forms.clear(netPicture,0x80808080)
@@ -843,6 +837,12 @@ end
 
 function writeFile(filename)
         local file = io.open(filename, "w")
+	   console.writeline("Accessed " .. filename)
+
+	   if not file then
+		console.writeline("Doesnt open for some fucking reason???")
+	   end
+
         file:write(pool.generation .. "\n")
         file:write(pool.maxFitness .. "\n")
         file:write(#pool.species .. "\n")
@@ -965,8 +965,7 @@ function flipState()
 end
  
 function loadPool()
-	-- TODO: Change to my pool
-	filename = forms.openfile("DP1.state.pool","C:\Users\mmill\Downloads\BizHawk-2.2\Lua\SNES\neat-mario\pool") 
+	filename = forms.openfile("DP1.State.pool","D:/NEAT-Galaga/Galaga-NEAT/neat-mario/FitnessChangesOnly/pool") 
 	--local filename = forms.gettext(saveLoadFile)
 	forms.settext(saveLoadFile, filename)
 	loadFile(filename)
@@ -998,7 +997,7 @@ function onExit()
 	forms.destroy(form)
 end
 
-writeFile("C:/Users/mmill/Downloads/BizHawk-2.2/Lua/SNES/neat-mario/pool/temp.pool")
+writeFile("D:/NEAT-Galaga/Galaga-NEAT/neat-mario/FitnessChangesOnly/temp-pool/temp.pool")
 
 event.onexit(onExit)
 
@@ -1011,7 +1010,6 @@ FitnessLabel = forms.label(form, "Fitness: " .. "", 5, 30)
 MaxLabel = forms.label(form, "Maximum: " .. "", 130, 30)
 
 ScoreLabel = forms.label(form, "Score: " .. "", 130, 65)
-DmgLabel = forms.label(form, "Damage: " .. "", 230, 65)
 
 startButton = forms.button(form, "Start", flipState, 155, 102)
 
@@ -1020,11 +1018,8 @@ saveButton = forms.button(form, "Save", savePool, 5, 102)
 loadButton = forms.button(form, "Load", loadPool, 80, 102)
 playTopButton = forms.button(form, "Play Top", playTop, 230, 102)
 
-saveLoadFile = forms.textbox(form, config.NeatConfig.Filename .. ".pool", 170, 25, nil, 5, 148)
+saveLoadFile = forms.textbox(form, "D:/NEAT-Galaga/Galaga-NEAT/neat-mario/FitnessChangesOnly/pool/DP1.State.pool", 170, 25, nil, 5, 148)
 saveLoadLabel = forms.label(form, "Save/Load:", 5, 129)
-
-
--- TODO: Most code changes will be in here
 
 while true do
 	
@@ -1033,63 +1028,49 @@ while true do
 	local species = pool.species[pool.currentSpecies]
 	local genome = species.genomes[pool.currentGenome]
 	
-	displayGenome(genome)
+	--displayGenome(genome)
 	
-	if pool.currentFrame%5 == 0 then
+	-- Advances the frame until game is no longer in an intro
+	while game.getGameMode() ~= 208 do
+		emu.frameadvance()
+	end
+
+	if pool.currentFrame%3 == 0 then
 		evaluateCurrent()
 	end
 
 	joypad.set(controller)
 
-	game.getPositions()
-	if marioX > rightmost then
-		rightmost = marioX
+	-- If it hasnt gained score in a bit, then decrease the timeout timer
+	local score = game.getScore()
+	if score > prevScore then
+		prevScore = score
 		timeout = config.NeatConfig.TimeoutConstant
 	end
-	
-	local hitTimer = game.getMarioHitTimer()
-	
-	-- Likely change to be "death" counter instead of hit counter as the ship effectively only has 1 life
 
-	if checkMarioCollision == true then
-		if hitTimer > 0 then
-			shipHitCounter = shipHitCounter + 1
-			console.writeline("Ship took damage, hit counter: " .. shipHitCounter)
-			checkMarioCollision = false
-		end
-	end
-	
-	if hitTimer == 0 then
-		checkMarioCollision = true
-	end
-	
 	timeout = timeout - 1
 	
-	local timeoutBonus = pool.currentFrame / 4
-	if timeout + timeoutBonus <= 0 then
-
+	if timeout <= 0 or game.getLives() == 0 then
 		local score = game.getScore() - startScore
-		
+		local lives = game.getLives()
+	
 		console.writeline("Score: " .. score)
 
-		local scoreFitness = (score * 0.2);
-		if (score) > 0 then 
+		local scoreFitness = (score * 1.0)
+		local livesFitness = lives * 100
+
+		if (score) > 0 then
 			console.writeline("Score added " .. scoreFitness .. " fitness")
+			console.writeline("Lives added " .. livesFitness .. " fitness")
 		end
-		
-		local hitPenalty = shipHitCounter * 200
-		
-		local fitness = scoreFitness - hitPenalty + rightmost - pool.currentFrame / 2
 
-		-- TODO: Change to enemy count to be 0 for beat level
+	
+		local fitness = (scoreFitness + livesFitness) - pool.currentFrame / 10
 
-		if rightmost > 4816 then
-			fitness = fitness + 1000
-			console.writeline("!!!!!!Beat level!!!!!!!")
-		end
-		if fitness == 0 then
+		if fitness == 0 or scoreFitness == 0 then
 			fitness = -1
 		end
+
 		genome.fitness = fitness
 		
 		if fitness > pool.maxFitness then
@@ -1097,10 +1078,11 @@ while true do
 			--writeFile("backup." .. pool.generation .. "." .. forms.gettext(saveLoadFile))
 			writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
 		end
-		
+	
 		console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness)
 		pool.currentSpecies = 1
 		pool.currentGenome = 1
+		
 		while fitnessAlreadyMeasured() do
 			nextGenome()
 		end
@@ -1118,14 +1100,13 @@ while true do
 		end
 	end
 	
-	forms.settext(FitnessLabel, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
+	forms.settext(FitnessLabel, "Fitness: " .. math.floor(prevScore - (pool.currentFrame)/10))
 	forms.settext(GenerationLabel, "Generation: " .. pool.generation)
 	forms.settext(SpeciesLabel, "Species: " .. pool.currentSpecies)
 	forms.settext(GenomeLabel, "Genome: " .. pool.currentGenome)
 	forms.settext(MaxLabel, "Maximum: " .. math.floor(pool.maxFitness))
 	forms.settext(MeasuredLabel, "Measured: " .. math.floor(measured/total*100) .. "%")
 	forms.settext(ScoreLabel, "Score: " .. (game.getScore() - startScore))
-	forms.settext(DmgLabel, "Damage: " .. shipHitCounter)
 
 	pool.currentFrame = pool.currentFrame + 1
 	

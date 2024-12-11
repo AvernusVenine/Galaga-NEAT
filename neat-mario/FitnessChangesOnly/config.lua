@@ -1,11 +1,9 @@
 local _M = {}
 
 _M.NeatConfig = {
---Filename = "DP1.state",
+Filename = "D:/NEAT-Galaga/Galaga-NEAT/neat-mario/FitnessChangesOnly/pool/DP1.State",
 
--- TODO: Change this to my initial state
-Filename = "/Galaga-NEAT/neat-mario/FitnessChangesOnly/pool/",
-Population = 300,
+Population = 200,
 DeltaDisjoint = 2.0,
 DeltaWeights = 0.4,
 DeltaThreshold = 1.0,
@@ -19,23 +17,17 @@ BiasMutationChance = 0.40,
 StepSize = 0.1,
 DisableMutationChance = 0.4,
 EnableMutationChance = 0.2,
-TimeoutConstant = 20,
+TimeoutConstant = 500,
 MaxNodes = 1000000,
 }
 
 _M.ButtonNames = {
-		"A",
 		"B",
-		"X",
-		"Y",
-		"Up",
-		"Down",
 		"Left",
 		"Right",
 	}
 	
-_M.BoxRadius = 6
-_M.InputSize = (_M.BoxRadius*2+1)*(_M.BoxRadius*2+1)
+_M.InputSize = 195
 
 _M.Running = false
 

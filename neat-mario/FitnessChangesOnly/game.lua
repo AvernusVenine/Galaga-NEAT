@@ -1,117 +1,270 @@
 --Notes here
 config = require "config"
 local _M = {}
-function _M.getPositions()
-	marioX = memory.read_s16_le(0x94)
-	marioY = memory.read_s16_le(0x96)
-		
-	local layer1x = memory.read_s16_le(0x1A);
-	local layer1y = memory.read_s16_le(0x1C);
-		
-	screenX = marioX-layer1x
-	screenY = marioY-layer1y
+
+function _M.loadSprites()
+	sprites = {}
+
+	-- Fighter
+	sprites[0x00] = 1
+
+	-- BOSS SHIP
+
+	-- Boss Ship
+	for i=0x1A,0x32 do
+		sprites[i] = -5
+	end
+
+	-- REGULAR ENEMIES
+
+	-- Butterfly
+	for i=0x34,0x4A do
+		sprites[i] = -2
+	end
+
+	-- Bee
+	for i=0x4E,0x64 do
+		sprites[i] = -2
+	end
+
+	-- Boss Galaxian
+	for i=0x68,0x7B do
+		sprites[i] = -3
+	end
+
+	-- Scorpion
+	for i=0x82,0x9A do
+		sprites[i] = -3
+	end
+
+	-- Ray
+	for i=0x9C,0xB0 do
+		sprites[i] = -3
+	end
+
+	-- CHALLENGE STAGE ONLY ENEMIES
+
+	-- Dragonfly
+	for i=0xB6,0xCA do
+		sprites[i] = -4
+	end
+
+	-- Enterprise
+	for i=0xD0,0xE1 do
+		sprites[i] = -4
+	end
+
+	-- Flower
+	for i=0xEA,0xF5 do
+		sprites[i] = -4
+	end
+
 end
 
-function _M.getCoins()
-	local coins = memory.readbyte(0x0DBF)
-	return coins
+function _M.getStage()
+	local stage = memory.readbyte(0x0482)
+	return stage 
+end
+
+function _M.getEnemyCount()
+	local count = memory.readbyte(0x0494)
+	return count
+end
+
+function _M.getPosition()
+	local shipX = memory.readbyte(0x0014)
+	return shipX
+end
+
+function _M.getGameMode()
+	local mode = memory.readbyte(0x0018)
+	return mode
+end
+
+function _M.getLives()
+	local lives = memory.readbyte(0x0485)
+	return lives
 end
 
 function _M.getScore()
-	local scoreLeft = memory.read_s16_le(0x0F34)
-	local scoreRight = memory.read_s16_le(0x0F36)
-	local score = ( scoreLeft * 10 ) + scoreRight
-	return score
+	local scoreTen = memory.readbyte(0x00E6)
+	local scoreHund = memory.readbyte(0x00E5)
+	local scoreThous = memory.readbyte(0x00E4)
+	local scoreTenThous = memory.readbyte(0x00E3)
+	local scoreHundThous = memory.readbyte(0x00E2)
+	local scoreMill = memory.readbyte(0x00E1)
+
+	local score = (scoreTen) + (scoreHund * 10) + (scoreThous * 100) + (scoreTenThous * 1000) + (scoreHundThous * 10000) + (scoreMill * 100000)
+	return score 
 end
 
-function _M.getMarioHit(alreadyHit)
-	local timer = memory.read_s16_le(0x1497)
-	if timer > 0 then
-		if alreadyHit == false then
-			return true
-		else
-			return false
+function _M.getActives()
+	local actives = {}
+	for slot=0,31 do
+		local offset = slot * 8
+
+		local status = memory.readbyte(0x0701 + offset)
+		if status ~= 0xFE then
+			spritex = memory.readbyte(0x0700 + offset) + 7
+			spritey = memory.readbyte(0x0703 + offset)
+			
+			local util = memory.readbyte(0x0702)
+			util = util & 0x03
+			
+			if sprites[status] == 1 and util == 3 then
+				actives[#actives+1] = {["x"]=spritex, ["y"]=spritey, ["type"]=2}
+			else
+				actives[#actives+1] = {["x"]=spritex, ["y"]=spritey, ["type"]=sprites[status]}
+			end
 		end
-	else
-		return false
 	end
+
+	return actives
 end
 
-function _M.getMarioHitTimer()
-	local timer = memory.read_s16_le(0x1497)
-	return timer
-end
+function _M.getPassives()
+	local passives = {}
 
-function _M.getTile(dx, dy)
-	x = math.floor((marioX+dx+8)/16)
-	y = math.floor((marioY+dy)/16)
-		
-	return memory.readbyte(0x1C800 + math.floor(x/0x10)*0x1B0 + y*0x10 + x%0x10)
-end
+	for i = 1, 48 do
+		passives[i] = 0
+	 end
 
-function _M.getSprites()
-	local sprites = {}
-	for slot=0,11 do
-		local status = memory.readbyte(0x14C8+slot)
-		if status ~= 0 then
-			spritex = memory.readbyte(0xE4+slot) + memory.readbyte(0x14E0+slot)*256
-			spritey = memory.readbyte(0xD8+slot) + memory.readbyte(0x14D4+slot)*256
-			sprites[#sprites+1] = {["x"]=spritex, ["y"]=spritey}
+	for slot=0,3 do
+		status = memory.readbyte(0x0403 + slot)
+
+		if status == 1 then
+			passives[slot + 5] = -9
 		end
-	end		
+		if status == 2 then
+			passives[slot + 5] = -10
+		end
+	end
+
+	for slot=0,7 do
+		status = memory.readbyte(0x0411 + slot)
+
+		if status == 1 then
+			passives[slot + 3] = -1
+		end
+	end
+
+	for slot=0,7 do
+		status = memory.readbyte(0x0421 + slot)
+
+		if status == 1 then
+			passives[slot + 3] = -1
+		end
+	end
+
+	for slot=0,9 do
+		status = memory.readbyte(0x0430 + slot)
 		
-	return sprites
+		if status == 1 then
+			passives[slot + 2] = -2
+		end
+	end
+
+	for slot=0,9 do
+		status = memory.readbyte(0x0440 + slot)
+
+		if status == 1 then
+			passives[slot + 2] = -2
+		end
+	end
+
+	return passives
 end
 
-function _M.getExtendedSprites()
-	local extended = {}
-	for slot=0,11 do
-		local number = memory.readbyte(0x170B+slot)
-		if number ~= 0 then
-			spritex = memory.readbyte(0x171F+slot) + memory.readbyte(0x1733+slot)*256
-			spritey = memory.readbyte(0x1715+slot) + memory.readbyte(0x1729+slot)*256
-			extended[#extended+1] = {["x"]=spritex, ["y"]=spritey}
+function _M.getBullets()
+	local bullets = {}
+
+	for slot=0,7 do
+		local offset = slot * 4
+
+		local status = memory.readbyte(0x0090 + offset)
+
+		if status ~= 128 then
+			bulletY = memory.readbyte(0x0091)
+			bulletX = memory.readbyte(0x0092)
+
+			bullets[#bullets+1] = {["x"] = bulletX, ["y"] = bulletY}
 		end
-	end		
-		
-	return extended
+	end
+
+	return bullets
 end
 
 function _M.getInputs()
-	_M.getPositions()
-	
-	sprites = _M.getSprites()
-	extended = _M.getExtendedSprites()
+	_M.loadSprites()
+
+	passives = _M.getPassives()
+	actives = _M.getActives()
+	bullets = _M.getBullets()
 	
 	local inputs = {}
-	
-	for dy=-config.BoxRadius*16,config.BoxRadius*16,16 do
-		for dx=-config.BoxRadius*16,config.BoxRadius*16,16 do
-			inputs[#inputs+1] = 0
-			
-			tile = _M.getTile(dx, dy)
-			if tile == 1 and marioY+dy < 0x1B0 then
-				inputs[#inputs] = 1
-			end
-			
-			for i = 1,#sprites do
-				distx = math.abs(sprites[i]["x"] - (marioX+dx))
-				disty = math.abs(sprites[i]["y"] - (marioY+dy))
-				if distx <= 8 and disty <= 8 then
-					inputs[#inputs] = -1
-				end
-			end
 
-			for i = 1,#extended do
-				distx = math.abs(extended[i]["x"] - (marioX+dx))
-				disty = math.abs(extended[i]["y"] - (marioY+dy))
-				if distx < 8 and disty < 8 then
-					inputs[#inputs] = -1
-				end
-			end
+	-- Initialize empty
+	for i=1,195 do
+		inputs[i] = 0
+	end
+
+	-- Current stage
+	stage = _M.getStage()
+	inputs[193] = stage
+
+	-- Lives
+	lives = _M.getLives()
+	inputs[194] = lives
+
+	-- Passive ship state
+	state = memory.readbyte(0x049F)
+	inputs[195] = state
+
+	-- Passive ships
+	for i=1,#passives do
+		inputs[i] = passives[i]
+	end
+
+	-- Enemy bullets
+	for i=1,#bullets do
+		local tileX = math.floor(bullets[i]["x"] / 16)
+		local tileY = math.floor(bullets[i]["y"] / 16)
+
+		if tileX > 12 then
+			tileX = 12
+		end
+		if tileY > 15 then
+			tileY = 15
+		end
+
+		local index = (tileY * 12 + tileX)
+
+		inputs[index] = -1
+	end
+
+	-- Active ships
+	for i=1,#actives do
+		local tileX = math.floor(actives[i]["x"] / 16)
+		local tileY = math.floor(actives[i]["y"] / 16)
+
+		if tileX > 12 then
+			tileX = 12
+		end
+		if tileY > 15 then
+			tileY = 15
+		end
+
+		local index = tileY * 12 + tileX
+
+		inputs[index] = actives["type"]
+	end
+
+	for i=1,195 do
+		if inputs[i] == nil then
+			inputs[i] = 0
 		end
 	end
-	
+
 	return inputs
 end
 
