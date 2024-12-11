@@ -1,4 +1,4 @@
-# Neat[Tinkering]
+# NeatGALAGA
 Update to [Seth Bling's Mar I/O][1] lua code, forked from [mam91/Neat-Genetic-Mario][2].
 
 # NeatResearch
