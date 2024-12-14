@@ -638,6 +638,7 @@ end
 function initializeRun()
 	savestate.load("D:/NEAT-Galaga/Galaga-NEAT/network/pool/DP1.State");
 	prevScore = 0
+	prevFitness = 0
 	pool.currentFrame = 0
 	timeout = config.NeatConfig.TimeoutConstant
 	game.clearJoypad()
@@ -1037,7 +1038,7 @@ while true do
 		emu.frameadvance()
 	end
 
-	if pool.currentFrame%3 == 0 then
+	if pool.currentFrame%5 == 0 then
 		evaluateCurrent()
 	end
 
@@ -1053,22 +1054,23 @@ while true do
 	timeout = timeout - 1
 	
 	if timeout <= 0 or game.getLives() == 0 then
+		console.writeline("Score: " .. score)
+
 		local score = game.getScore() - startScore
 		local lives = game.getLives()
 	
-		console.writeline("Score: " .. score)
-
 		local scoreFitness = (score * 0.25)
-		local killsFitness = (40 - game.getEnemyCount()) * 100
+		local killsFitness = (40 - game.getEnemyCount() + 40 * (game.getStage() - 1)) * 100
 		local livesFitness = (lives * 100)
+	
+		local fitness = (scoreFitness + livesFitness + killsFitness) - pool.currentFrame / 10
+		prevFitness = fitness
 
 		if (score) > 0 then
 			console.writeline("Score added " .. scoreFitness .. " fitness")
 			console.writeline("Kills added " .. killsFitness .. " fitness")
 			console.writeline("Lives added " .. livesFitness .. " fitness")
 		end
-	
-		local fitness = (scoreFitness + livesFitness + killsFitness) - pool.currentFrame / 10
 
 		if fitness == 0 or scoreFitness == 0 then
 			fitness = -1
@@ -1103,7 +1105,7 @@ while true do
 		end
 	end
 	
-	forms.settext(FitnessLabel, "Fitness: " .. math.floor(prevScore - (pool.currentFrame)/10))
+	forms.settext(FitnessLabel, "Fitness: " .. prevFitness)
 	forms.settext(GenerationLabel, "Generation: " .. pool.generation)
 	forms.settext(SpeciesLabel, "Species: " .. pool.currentSpecies)
 	forms.settext(GenomeLabel, "Genome: " .. pool.currentGenome)

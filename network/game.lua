@@ -249,54 +249,49 @@ function _M.getInputs()
 	state = memory.readbyte(0x049F)
 	inputsOffset[171] = state
 
+	-- Calculate offset to center grid around ship
+	local shipX = _M.getPosition()
+	local shipOffset = 96 - shipX
+
+	inputsOffset[12 * 16 + 7] = 1
+
+	local tileOffset = 6 - math.floor(shipX / 16)
+
 	-- Passive ships
 	for i=1,#passives do
-		inputs[i] = passives[i]
+		local row = math.floor((i - 1) / 12)
+		local col = (i - 1) % 12
+
+		local newCol = col + tileOffset
+
+		if newCol >= 0 and newCol < 12 then
+			local index = row * 12 + newCol + 1
+			inputs[i] = passives[i]
+		end
 	end
 
 	-- Enemy bullets
 	for i=1,#bullets do
-		local tileX = math.floor(bullets[i]["x"] / 16) + 1
+
+		local tileX = math.floor((bullets[i]["x"] + shipOffset) / 16) + 1
 		local tileY = math.floor(bullets[i]["y"] / 16) + 1
 
-		tileX = math.max(1, math.min(tileX, 14))
-		tileY = math.max(1, math.min(tileY, 12))
+		if tileX < 15 and tileY < 13 and tileX > 0 and tileY > 0 then
+			local index = (tileY - 1) * 14 + tileX
 
-		local index = (tileY - 1) * 14 + tileX
-
-		inputs[index] = 0.5
+			inputs[index] = -0.5
+		end
 	end
 
 	-- Active ships
 	for i=1,#actives do
-		local tileX = math.floor(actives[i]["x"] / 16) + 1
+		local tileX = math.floor((actives[i]["x"] + shipOffset) / 16) + 1
 		local tileY = math.floor(actives[i]["y"] / 16) + 1
 
-		tileX = math.max(1, math.min(tileX, 14))
-		tileY = math.max(1, math.min(tileY, 12))
+		if tileX < 15 and tileY < 13 and tileX > 0 and tileY > 0 then
+			local index = (tileY - 1) * 14 + tileX
 
-		local index = tileY * 14 + tileX
-
-		inputs[index] = actives[i]["type"]
-	end
-
-	-- Player Fighter and Offset
-	local ship = _M.getPosition()
-	local tile = math.floor(ship / 16)
-	local offset = 6 - tile
-
-	inputsOffset[12 * 16 + 7] = 1
-
-	-- Apply Offset
-	for i=1,(12 * 14) do
-		local row = math.floor((i - 1) / 12)
-		local col = (i - 1) % 12
-
-		local newCol = col + offset
-
-		if newCol >= 0 and newCol < 12 then
-			local index = row * 12 + newCol + 1
-			inputsOffset[index] = inputs[i]
+			inputs[index] = actives[i]["type"]
 		end
 	end
 
