@@ -229,31 +229,29 @@ function _M.getInputs()
 	bullets = _M.getBullets()
 	
 	local inputs = {}
-	local inputsOffset = {}
 
 	-- Initialize empty
 	for i=1,(12 * 14) + 3 do
 		inputs[i] = 0
-		inputsOffset[i] = 0
 	end
 
 	-- Current stage
 	stage = _M.getStage()
-	inputsOffset[169] = stage
+	inputs[169] = stage
 
 	-- Lives
 	lives = _M.getLives()
-	inputsOffset[170] = lives
+	inputs[170] = lives
 
 	-- Passive ship state
 	state = memory.readbyte(0x049F)
-	inputsOffset[171] = state
+	inputs[171] = state
 
 	-- Calculate offset to center grid around ship
 	local shipX = _M.getPosition()
 	local shipOffset = 96 - shipX
 
-	inputsOffset[12 * 16 + 7] = 1
+	inputs[12 * 16 + 7] = 1
 
 	local tileOffset = 6 - math.floor(shipX / 16)
 
@@ -296,12 +294,12 @@ function _M.getInputs()
 	end
 
 	for i=1,(12 * 14) + 3 do
-		if inputsOffset[i] == nil then
-			inputsOffset[i] = 0
+		if inputs[i] == nil then
+			inputs[i] = 0
 		end
 	end
 
-	return inputsOffset
+	return inputs
 end
 
 function _M.clearJoypad()
