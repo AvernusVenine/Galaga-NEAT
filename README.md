@@ -1,10 +1,6 @@
 # NeatGALAGA
 Update to Seth Bling's Mar I/O lua code, forked from mam91/Neat-Genetic-Mario.
-
-# NeatResearch
-
-An adaptation of SethBlings Mar I/O to learn to play Galaga, another NES classic.
-
+[Training Example Footage](https://youtu.be/qEMaJrTic6A?si=AOjMvNiZ62uiCTKz)
 
 ## Instructions
 1. Install [BizHawk](https://github.com/TASVideos/BizHawk) prerequesites & emulator:
